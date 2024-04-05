@@ -854,7 +854,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
   }
 }
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 console.log(
 	`SNP_exporter - Server listening to ${port}, metrics exposed on /metrics endpoint`,
 );
