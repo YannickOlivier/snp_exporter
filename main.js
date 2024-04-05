@@ -153,64 +153,64 @@ const wanStatusSecondaryTxRate = new client.Gauge({
 register.registerMetric(wanStatusSecondaryTxRate);
 
 const wanStatusRxConfigBw100G = new client.Gauge({
-	name: "snp_wan_status_primary_rx_config_bw_100G",
-	help: "snp_wan_status_primary_rx_config_bw_100G of the Wan",
+	name: "snp_wan_status_rx_config_bw_100G",
+	help: "snp_wan_status_rx_config_bw_100G of the Wan",
 	labelNames: ['unit']
 });
 register.registerMetric(wanStatusRxConfigBw100G);
 
 const wanStatusRxConfigBw25GA = new client.Gauge({
-	name: "snp_wan_status_primary_rx_config_bw_25G_A",
-	help: "snp_wan_status_primary_rx_config_bw_25G_A of the Wan",
+	name: "snp_wan_status_rx_config_bw_25G_A",
+	help: "snp_wan_status_rx_config_bw_25G_A of the Wan",
 });
 register.registerMetric(wanStatusRxConfigBw25GA);
 
 const wanStatusRxConfigBw25GB = new client.Gauge({
-	name: "snp_wan_status_primary_rx_config_bw_25G_B",
-	help: "snp_wan_status_primary_rx_config_bw_25G_B of the Wan",
+	name: "snp_wan_status_rx_config_bw_25G_B",
+	help: "snp_wan_status_rx_config_bw_25G_B of the Wan",
 });
 register.registerMetric(wanStatusRxConfigBw25GB);
 
 const wanStatusRxConfigBw25GC = new client.Gauge({
-	name: "snp_wan_status_primary_rx_config_bw_25G_C",
-	help: "snp_wan_status_primary_rx_config_bw_25G_C of the Wan",
+	name: "snp_wan_status_rx_config_bw_25G_C",
+	help: "snp_wan_status_rx_config_bw_25G_C of the Wan",
 });
 register.registerMetric(wanStatusRxConfigBw25GC);
 
 const wanStatusRxConfigBw25GD = new client.Gauge({
-	name: "snp_wan_status_primary_rx_config_bw_25G_D",
-	help: "snp_wan_status_primary_rx_config_bw_25G_D of the Wan",
+	name: "snp_wan_status_rx_config_bw_25G_D",
+	help: "snp_wan_status_rx_config_bw_25G_D of the Wan",
 });
 register.registerMetric(wanStatusRxConfigBw25GD);
 
 const wanStatusTxConfigBw100G = new client.Gauge({
-	name: "snp_wan_status_primary_tx_config_bw_100G",
-	help: "snp_wan_status_primary_tx_config_bw_100G of the Wan",
+	name: "snp_wan_status_tx_config_bw_100G",
+	help: "snp_wan_status_tx_config_bw_100G of the Wan",
 	labelNames: ['unit']
 });
 register.registerMetric(wanStatusTxConfigBw100G);
 
 const wanStatusTxConfigBw25GA = new client.Gauge({
-	name: "snp_wan_status_primary_tx_config_bw_25G_A",
-	help: "snp_wan_status_primary_tx_config_bw_25G_A of the Wan",
+	name: "snp_wan_status_tx_config_bw_25G_A",
+	help: "snp_wan_status_tx_config_bw_25G_A of the Wan",
 });
 register.registerMetric(wanStatusTxConfigBw25GA);
 
 const wanStatusTxConfigBw25GB = new client.Gauge({
-	name: "snp_wan_status_primary_tx_config_bw_25G_B",
-	help: "snp_wan_status_primary_tx_config_bw_25G_B of the Wan",
+	name: "snp_wan_status_tx_config_bw_25G_B",
+	help: "snp_wan_status_tx_config_bw_25G_B of the Wan",
 });
 register.registerMetric(wanStatusTxConfigBw25GB);
 
 const wanStatusTxConfigBw25GC = new client.Gauge({
-	name: "snp_wan_status_primary_tx_config_bw_25G_C",
-	help: "snp_wan_status_primary_tx_config_bw_25G_C of the Wan",
+	name: "snp_wan_status_tx_config_bw_25G_C",
+	help: "snp_wan_status_tx_config_bw_25G_C of the Wan",
 });
 register.registerMetric(wanStatusTxConfigBw25GC);
 
 const wanStatusTxConfigBw25GD = new client.Gauge({
-	name: "snp_wan_status_primary_tx_config_bw_25G_D",
-	help: "snp_wan_status_primary_tx_config_bw_25G_D of the Wan",
+	name: "snp_wan_status_tx_config_bw_25G_D",
+	help: "snp_wan_status_tx_config_bw_25G_D of the Wan",
 });
 register.registerMetric(wanStatusTxConfigBw25GD);
 
@@ -529,8 +529,8 @@ async function snpGetToken(snpUrl, snpPort) {
       url: `https://${snpUrl}:${snpPort}/api/auth`,
       headers: { "Content-Type": "application/json" },
       data: {
-        "username": process.env.USERNAMESNP || "admin",
-        "password": process.env.PASSWORDSNP || "password"
+        "username": process.env.USERNAME_SNP || "admin",
+        "password": process.env.PASSWORD_SNP || "password"
       }
     });
     console.log(`snpGetToken [INFO] - ${snpUrl} - ${res.status}`);
