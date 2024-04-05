@@ -519,6 +519,8 @@ server.get('/metrics', async (req, res) =>
 		register.resetMetrics()
 });
 
+console.log('process.env.USERNAME', process.env.USERNAME);
+
 // Async function to get Token
 async function snpGetToken(snpUrl, snpPort) {
   try {
@@ -527,8 +529,8 @@ async function snpGetToken(snpUrl, snpPort) {
       url: `https://${snpUrl}:${snpPort}/api/auth`,
       headers: { "Content-Type": "application/json" },
       data: {
-        "username": process.env.USERNAME || "admin",
-        "password": process.env.PASSWORD || "password"
+        "username": process.env.USERNAMESNP || "admin",
+        "password": process.env.PASSWORDSNP || "password"
       }
     });
     console.log(`snpGetToken [INFO] - ${snpUrl} - ${res.status}`);
