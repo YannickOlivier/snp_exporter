@@ -3,8 +3,6 @@ Prometheus exporter for Imagine SNP (Selenio Network Processor) - IP Processor (
 
 On a HTTP `/metrics` request, the exporter will query the Imagine SNP's API for data which it then aggregates and exposes as Prometheus metrics. 
 
-Default port: 9688
-
 
 ![Docker Pulls](https://img.shields.io/docker/pulls/yannick2110/snp_exporter?logo=Docker)
 ![Docker Image Version (latest)](https://img.shields.io/docker/v/yannick2110/snp_exporter?label=latest%20docker%20image&logo=Docker)
