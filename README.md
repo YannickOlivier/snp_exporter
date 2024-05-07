@@ -28,26 +28,32 @@ Docker container image: [https://hub.docker.com/r/yannick2110/snp_exporter](http
 
 ## snp_exporter example 
 
+### Route - option 1
 `http://localhost:8080/metrics?instance=10.10.10.1&port=9089`
+
+### Route - option 2
+`http://localhost:8080/metrics/10.10.10.10/9089`
 
 Will return (short portion of prometheus metrics)
 
 ````
-# HELP snp_system_status_qsfp_primary_rx_power_1 snp_system_status_qsfp_primary_rx_power_1 of the System
-# TYPE snp_system_status_qsfp_primary_rx_power_1 gauge
-snp_system_status_qsfp_primary_rx_power_1{unit="dBm",app="snp_exporter"} -1
+# HELP snp_ptp_status snp_ptp_status of the PTP client
+# TYPE snp_ptp_status gauge
+snp_ptp_status{component="utc_time",unit="ms",app="snp_exporter"} 1713259694000
+snp_ptp_status{component="biggest_sys_time_update",unit="ms",app="snp_exporter"} 6573
+snp_ptp_status{component="num_sys_time_update",app="snp_exporter"} 7
+snp_ptp_status{component="ptp_master_delay",app="snp_exporter"} 0.883
+snp_ptp_status{component="ptp_master_offset",app="snp_exporter"} 0.498
 
-# HELP snp_system_status_qsfp_primary_tx_power_1 snp_system_status_qsfp_primary_tx_power_1 of the System
-# TYPE snp_system_status_qsfp_primary_tx_power_1 gauge
-snp_system_status_qsfp_primary_tx_power_1{unit="dBm",app="snp_exporter"} -1
-
-# HELP snp_system_status_qsfp_secondary_rx_power_1 snp_system_status_qsfp_secondary_rx_power_1 of the System
-# TYPE snp_system_status_qsfp_secondary_rx_power_1 gauge
-snp_system_status_qsfp_secondary_rx_power_1{unit="dBm",app="snp_exporter"} -120
-
-# HELP snp_system_status_qsfp_secondary_tx_power_1 snp_system_status_qsfp_secondary_tx_power_1 of the System
-# TYPE snp_system_status_qsfp_secondary_tx_power_1 gauge
-snp_system_status_qsfp_secondary_tx_power_1{unit="dBm",app="snp_exporter"} -120
+# HELP snp_wan_status snp_wan_status of the System
+# TYPE snp_wan_status gauge
+snp_wan_status{alarmType="wan_alarm",component="errs",network="primary",way="rx",app="snp_exporter"} 0
+snp_wan_status{alarmType="wan_alarm",component="over_bandwidth",network="primary",way="rx",app="snp_exporter"} 0
+snp_wan_status{alarmType="wan_alarm",component="pkts",network="primary",way="rx",app="snp_exporter"} 8094088
+snp_wan_status{alarmType="wan_alarm",component="rate",network="primary",way="rx",unit="Mbps",app="snp_exporter"} 0.02
+snp_wan_status{alarmType="wan_alarm",component="config_bw_100G",way="rx",unit="Mbps",app="snp_exporter"} 0
+snp_wan_status{alarmType="wan_alarm",component="config_bw_25G_A",way="rx",app="snp_exporter"} 0
+snp_wan_status{alarmType="wan_alarm",component="config_bw_25G_B",way="rx",app="snp_exporter"} 0
 ````
 
 ## docker-compose example 
