@@ -1,16 +1,19 @@
 const express = require('express');
 const axios = require('axios');
-const Prometheus = require('prom-client');
-const register = new Prometheus.Registry();
 const client = require('prom-client');
 const moment = require('moment'); 
+const { Mutex } = require('async-mutex');
+const metricsMutex = new Mutex();
+
+const register = new client.Registry();
 
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const server = express();
 
 register.setDefaultLabels({
-	app: 'snp_exporter'
+	app: 'snp_exporter',
+	hostname: ''
 })
 
 // Pull the SNP Processor Personalities
@@ -143,35 +146,47 @@ register.registerMetric(systemStatusAlarmStatsMajorInstances);
 // Express server - route 1
 server.get('/metrics/:urlSnp/:portSnp', async (req, res) =>
 {
-	res.setHeader('Content-Type',register.contentType)
-	const urlSnp = req.params.urlSnp; 
-	const portSnp = req.params.portSnp; 
-	var ptp = await snpGetStatusPtp(urlSnp, portSnp);
-	var wan = await snpGetStatusWan(urlSnp, portSnp);
-	var system = await snpGetStatusSystem(urlSnp, portSnp);
-	var proca = await snpGetStatusProcA(urlSnp, portSnp);
-	var procb = await snpGetStatusProcB(urlSnp, portSnp);
-	var procc = await snpGetStatusProcC(urlSnp, portSnp);
-	var procad = await snpGetStatusProcD(urlSnp, portSnp);
-	register.metrics().then(data => res.status(200).send(data))
-	register.resetMetrics()
+    const release = await metricsMutex.acquire();
+    try {
+        res.setHeader('Content-Type', register.contentType);
+        const urlSnp = req.params.urlSnp;
+        const portSnp = req.params.portSnp;
+        await snpGetStatusPtp(urlSnp, portSnp);
+        await snpGetStatusWan(urlSnp, portSnp);
+        await snpGetStatusSystem(urlSnp, portSnp);
+        await snpGetStatusProcA(urlSnp, portSnp);
+	      await snpGetStatusProcB(urlSnp, portSnp);
+        await snpGetStatusProcC(urlSnp, portSnp);
+        await snpGetStatusProcD(urlSnp, portSnp);
+        const data = await register.metrics();
+        res.status(200).send(data);
+    } finally {
+        register.resetMetrics();
+        release();
+    }
 });
 
 // Express server - route 2
 server.get('/metrics', async (req, res) =>
 {
-	res.setHeader('Content-Type',register.contentType)
-	const urlSnp = req.query.instance; 
-	const portSnp = req.query.port; 
-	var ptp = await snpGetStatusPtp(urlSnp, portSnp);
-	var wan = await snpGetStatusWan(urlSnp, portSnp);
-	var system = await snpGetStatusSystem(urlSnp, portSnp);
-	var proca = await snpGetStatusProcA(urlSnp, portSnp);
-	var procb = await snpGetStatusProcB(urlSnp, portSnp);
-	var procc = await snpGetStatusProcC(urlSnp, portSnp);
-	var procad = await snpGetStatusProcD(urlSnp, portSnp);
-	register.metrics().then(data => res.status(200).send(data))
-	register.resetMetrics()
+    const release = await metricsMutex.acquire();
+    try {
+        res.setHeader('Content-Type', register.contentType);
+        const urlSnp = req.query.instance;
+        const portSnp = req.query.port;
+        await snpGetStatusPtp(urlSnp, portSnp);
+        await snpGetStatusWan(urlSnp, portSnp);
+        await snpGetStatusSystem(urlSnp, portSnp);
+        await snpGetStatusProcA(urlSnp, portSnp);
+	      await snpGetStatusProcB(urlSnp, portSnp);
+        await snpGetStatusProcC(urlSnp, portSnp);
+        await snpGetStatusProcD(urlSnp, portSnp);
+        const data = await register.metrics();
+        res.status(200).send(data);
+    } finally {
+        register.resetMetrics();
+        release();
+    }
 });
 
 // Async function to get Token
@@ -399,6 +414,7 @@ async function snpGetStatusPtp(snpUrl, snpPort) {
     const res = await axios({
       method: 'get',
       url: `https://${snpUrl}:${snpPort}/api/elements/${snpUrl}/status/ptp`,
+			timeout: process.env.TIMEOUT_SNP || 3000,
       headers: {
         "Content-Type": "application/json",
         "Authorization": token,
@@ -407,6 +423,12 @@ async function snpGetStatusPtp(snpUrl, snpPort) {
 
 		const ptp = res.data.ptpStatus;
 		
+		var ptpStatusSnp = 1;
+
+		if (ptp.ptpCtlrState === "Locked" & ptp.ptpMasterPresent === "Primary/Secondary") {
+			ptpStatusSnp = 0;
+		}
+
 		ptpStatusAll.labels({
 			clockIdentity: ptp.clockIdentity,
 			ptpCtlrState: ptp.ptpCtlrState,
@@ -415,7 +437,7 @@ async function snpGetStatusPtp(snpUrl, snpPort) {
 			ptpMasterPresent: ptp.ptpMasterPresent,
 			ptpMasterUUID: ptp.ptpMasterUUID,
 			ptpUcipIsMaster: ptp.ptpUcipIsMaster
-		}).set(1);
+		}).set(ptpStatusSnp);
 
 		ptpStatus.labels({
 			component: 'utc_time',
@@ -458,6 +480,7 @@ async function snpGetStatusWan(snpUrl, snpPort) {
     const res = await axios({
       method: 'get',
       url: `https://${snpUrl}:${snpPort}/api/elements/${snpUrl}/status/ipWan`,
+			timeout: process.env.TIMEOUT_SNP || 3000,
       headers: {
         "Content-Type": "application/json",
         "Authorization": token,
@@ -474,7 +497,9 @@ async function snpGetStatusWan(snpUrl, snpPort) {
 			registrationServer: wan.registrationServer,
 			registrationServerConnected: wan.registrationServerConnected,
 			systemServer: wan.systemServer
-		}).set(1);
+		}).set(0);
+
+		register.setDefaultLabels({hostname: wan.hostName});
 		
 		// primary
 		wanStatusPrimary.labels({
@@ -484,7 +509,7 @@ async function snpGetStatusWan(snpUrl, snpPort) {
 			priIpMask: wan.priIpMask,
 			priPortInfo: wan.priPortInfo,
 			priSwitchInfo: wan.priSwitchInfo,
-		}).set(1);
+		}).set(0);
 		wanStatusSecondary.labels({
 			secEthMACaddr: wan.secEthMACaddr,
 			secGateway: wan.secGateway,
@@ -492,7 +517,7 @@ async function snpGetStatusWan(snpUrl, snpPort) {
 			secIpMask: wan.secIpMask,
 			secPortInfo: wan.secPortInfo,
 			secSwitchInfo: wan.secSwitchInfo,
-		}).set(1);
+		}).set(0);
 
 		for (let i = 0 ; i < 2; i++) {
 			const net = (i == 0) ? "pri" : "sec";
@@ -523,22 +548,36 @@ async function snpGetStatusWan(snpUrl, snpPort) {
 					way: w.toLowerCase(),
 				}).set(parseFloat(eval(`wan.${net}${w}Pkts`)));
 
+				var wanRate = parseFloat(eval(`wan.${net}${w}Rate`).split(' ')[0])
+
+				// convert all rate Mbps to Gbps
+				if (eval(`wan.${net}${w}Rate`).split(' ')[1] === "Mbps") {
+					wanRate = parseFloat(eval(`wan.${net}${w}Rate`).split(' ')[0]) / 1000
+				}
+
 				// rx & tx rate	
 				wanStatus.labels({
 					alarmType: 'wan_alarm',
 					component: `rate`,
 					network: (i == 0) ? "primary" : "secondary",
 					way: w.toLowerCase(),
-					unit: eval(`wan.${net}${w}Rate`).split(' ')[1]
-				}).set(parseFloat(eval(`wan.${net}${w}Rate`).split(' ')[0]));
+					unit: "Gbps"
+				}).set(wanRate);
+
+				var configBw = parseFloat(eval(`wan.${w.toLowerCase()}ConfigBw100G`).split(' ')[0]);
+
+				// convert all config Bw Mbps to Gbps
+				if (eval(`wan.${w.toLowerCase()}ConfigBw100G`).split(' ')[1] === "Mbps") {
+					configBw = parseFloat(eval(`wan.${w.toLowerCase()}ConfigBw100G`).split(' ')[0]) / 1000
+				}
 
 				// rx & tx config Bw 100G
 				wanStatus.labels({
 					alarmType: 'wan_alarm',
 					component: `config_bw_100G`,
 					way: w.toLowerCase(),
-					unit: eval(`wan.${w.toLowerCase()}ConfigBw100G`).split(' ')[1]
-				}).set(parseFloat(eval(`wan.${w.toLowerCase()}ConfigBw100G`).split(' ')[0]));
+					unit: "Gbps"
+				}).set(configBw);
 
 				// rx & tx config Bw 25G
 				["A", "B", "C", "D"].forEach(elmt => {
@@ -567,6 +606,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
     const res = await axios({
       method: 'get',
       url: `https://${snpUrl}:${snpPort}/api/elements/${snpUrl}/status/system`,
+			timeout: process.env.TIMEOUT_SNP || 3000,
       headers: {
         "Content-Type": "application/json",
         "Authorization": token,
@@ -581,7 +621,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 			serial: system.SNP_HW_Stats.Serial,
 			fwRev: system.SNP_HW_Stats.FWRev,
 			hwRev: system.SNP_HW_Stats.HWRev,
-		}).set(1);
+		}).set(0);
 
 		systemStatusAlarmStatsUniqueTypes.set(system.Alarm_Stats.uniqueTypes);
 		systemStatusAlarmStatsMinorInstances.set(system.Alarm_Stats.uniqueTypes);
@@ -592,7 +632,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 			systemStatusHwAlarm.labels({
 				alarmType: 'configuration_alarm',
 				component: `fpga_${i+1}`
-			}).set(1 - Number(system.FPGA_HW_Stats[i].Configuration_Alarm));	
+			}).set(Number(system.FPGA_HW_Stats[i].Configuration_Alarm));	
 		}
 
 		// fpga temp alarm
@@ -600,7 +640,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 			systemStatusHwAlarm.labels({
 				alarmType: 'temp_alarm',
 				component: `fpga_${i+1}`
-			}).set(1 - Number(system.FPGA_HW_Stats[i].Temp_Alarm));	
+			}).set(Number(system.FPGA_HW_Stats[i].Temp_Alarm));	
 		}
 		
 		// fpga fan alarm
@@ -608,7 +648,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 			systemStatusHwAlarm.labels({
 				alarmType: 'fan_alarm',
 				component: `fpga_${i+1}`
-			}).set(1 - Number(system.FPGA_HW_Stats[i].Fan_Alarm));	
+			}).set(Number(system.FPGA_HW_Stats[i].Fan_Alarm));	
 		}
 
 		// fpga fan temp
@@ -625,7 +665,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 			systemStatusHwAlarm.labels({
 				alarmType: 'fan_alarm',
 				component: `front_fan_${i+1}`
-			}).set(1 - Number(system.FPGA_HW_Stats[i].Fan_Alarm));	
+			}).set(Number(system.FPGA_HW_Stats[i].Fan_Alarm));	
 		}
 
 		// front fan speed
@@ -639,7 +679,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 		// power supply status
 		for (let i = 1; i < 3; i++) {
 			systemStatusHwAlarm.labels({
-				alarmType: 'ps_alarm',
+				alarmType: 'ps_enable',
 				component: `ps_${i}`,
 			}).set(Number(eval(`system.Power_Supply_Stats.PS_EN_${i}`)));
 			
@@ -669,9 +709,9 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 	
 		// clean PS general status
 		if (system.Power_Supply_Stats.PS_Status === "OK") {
-			system.Power_Supply_Stats.PS_Status = 1;
-		} else {
 			system.Power_Supply_Stats.PS_Status = 0;
+		} else {
+			system.Power_Supply_Stats.PS_Status = 1;
 		}
 		systemStatusHwAlarm.labels({
 			alarmType: 'ps_alarm',
@@ -742,8 +782,8 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 					network: (i == 0) ? "primary" : "secondary",
 					component: `qsfp_link_${n+1}`,
 					way: 'tx',
-					unit: eval(`system.QSFP_Stats[${i}].RxPower${n+1}.split(' ')[1]`)
-				}).set( Number( eval(`system.QSFP_Stats[${i}].RxPower${n+1}.split(' ')[0]`)));	
+					unit: eval(`system.QSFP_Stats[${i}].TxPower${n+1}.split(' ')[1]`)
+				}).set( Number( eval(`system.QSFP_Stats[${i}].TxPower${n+1}.split(' ')[0]`)));	
 			}
 		}
 
