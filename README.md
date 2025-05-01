@@ -25,6 +25,8 @@ Docker container image: [https://hub.docker.com/r/yannick2110/snp_exporter](http
 | PTP Status     | Offset, Delay, GMC ID...     |
 | Wan Status     | Primary and Secondary links  |
 | System Status  | Hardware (PS, Fans, FPGA)    |
+| Processor      | Personalities (Sync, Dual...)|
+| Console Status      | Uptime, Chassis, S/N... |
 
 ## snp_exporter example 
 
