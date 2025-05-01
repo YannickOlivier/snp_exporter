@@ -16,7 +16,36 @@ register.setDefaultLabels({
 	hostname: ''
 })
 
-// Crate custom metrics for SNP
+// Pull the SNP Processor Personalities
+const snpProcA = new client.Gauge({
+	name: "snp_processorA_personality",
+	help: "snp_processorA_personality",
+	labelNames: ['personality']
+});
+register.registerMetric(snpProcA);
+
+const snpProcB = new client.Gauge({
+	name: "snp_processorB_personality",
+	help: "snp_processorB_personality",
+	labelNames: ['personality']
+});
+register.registerMetric(snpProcB);
+
+const snpProcC = new client.Gauge({
+	name: "snp_processorC_personality",
+	help: "snp_processorC_personality",
+	labelNames: ['personality']
+});
+register.registerMetric(snpProcC);
+
+const snpProcD = new client.Gauge({
+	name: "snp_processorD_personality",
+	help: "snp_processorD_personality",
+	labelNames: ['personality']
+});
+register.registerMetric(snpProcD);
+
+// Create custom metrics for SNP
 const ptpStatusAll = new client.Gauge({
     name: "snp_ptp_status_all",
     help: "snp_ptp_status_all of the PTP client",
@@ -125,6 +154,10 @@ server.get('/metrics/:urlSnp/:portSnp', async (req, res) =>
         await snpGetStatusPtp(urlSnp, portSnp);
         await snpGetStatusWan(urlSnp, portSnp);
         await snpGetStatusSystem(urlSnp, portSnp);
+        await snpGetStatusProcA(urlSnp, portSnp);
+	      await snpGetStatusProcB(urlSnp, portSnp);
+        await snpGetStatusProcC(urlSnp, portSnp);
+        await snpGetStatusProcD(urlSnp, portSnp);
         const data = await register.metrics();
         res.status(200).send(data);
     } finally {
@@ -144,6 +177,10 @@ server.get('/metrics', async (req, res) =>
         await snpGetStatusPtp(urlSnp, portSnp);
         await snpGetStatusWan(urlSnp, portSnp);
         await snpGetStatusSystem(urlSnp, portSnp);
+        await snpGetStatusProcA(urlSnp, portSnp);
+	      await snpGetStatusProcB(urlSnp, portSnp);
+        await snpGetStatusProcC(urlSnp, portSnp);
+        await snpGetStatusProcD(urlSnp, portSnp);
         const data = await register.metrics();
         res.status(200).send(data);
     } finally {
@@ -154,23 +191,221 @@ server.get('/metrics', async (req, res) =>
 
 // Async function to get Token
 async function snpGetToken(snpUrl, snpPort) {
-  try {
-    const res = await axios({
-      method: 'post',
-      url: `https://${snpUrl}:${snpPort}/api/auth`,
-			timeout: process.env.TIMEOUT_SNP || 3000,
-      headers: { "Content-Type": "application/json" },
-      data: {
-        "username": process.env.USERNAME_SNP || "admin",
-        "password": process.env.PASSWORD_SNP || "password"
-      }
-    });
-    console.log(`snpGetToken [INFO] - ${snpUrl} - ${res.status}`);
-    return res.data;
-  } catch (err) {
-    console.log(`snpGetToken [ERROR] - ${snpUrl} - ${err}`);
-  }
+	try {
+	const res = await axios({
+		method: 'post',
+		url: `https://${snpUrl}:${snpPort}/api/auth`,
+		headers: { "Content-Type": "application/json" },
+		data: {
+		"username": process.env.USERNAME_SNP || "admin",
+		"password": process.env.PASSWORD_SNP || "password"
+		}
+	});
+	console.log(`snpGetToken [INFO] - ${snpUrl} - ${res.status}`);
+	return res.data;
+	} catch (err) {
+	console.log(`snpGetToken [ERROR] - ${snpUrl} - ${err}`);
+	}
+	}
+	
+	// Async function to get Processor Personality A
+	async function snpGetStatusProcA(snpUrl, snpPort) {
+	try {
+		console.log(`snpGetStatusProcA [INFO] - Requesting token for ${snpUrl}:${snpPort}`);
+		const token = await snpGetToken(snpUrl, snpPort);  // Get authorization token
+		console.log(`snpGetStatusProcA [INFO] - Token received: ${token}`);
+	
+		// Make the API request
+		const res = await axios({
+		method: 'get',
+		url: `https://${snpUrl}:${snpPort}/api/elements/${snpUrl}/config/processorA`,
+		headers: {
+			"Content-Type": "application/json",
+			"Authorization": token,  // Include authorization header
+		},
+		});
+		
+		console.log(`snpGetStatusProcA [INFO] - API Response Status: ${res.status}`);
+		console.log(`snpGetStatusProcA [INFO] - API Response Data: ${JSON.stringify(res.data)}`);
+	
+		// Check if 'config' exists in res.data before parsing
+		if (!res.data || !res.data.config) {
+		console.log("snpGetStatusProcA [ERROR] - No config data found in the response");
+		return;
+		}
+	
+// Parse the config field (as it's a JSON string) in res.data
+const proca = JSON.parse(res.data.config);
+console.log(`snpGetStatusProcA [INFO] - Parsed proca: ${JSON.stringify(proca)}`);
+
+// Check if 'general' and 'personality' exist in proca
+if (proca.general && proca.general.personality) {
+  console.log(`snpGetStatusProcA [INFO] - Personality: ${proca.general.personality}`);
+  
+  // Set the personality as a label in snpProcA metric
+  snpProcA.labels({
+    personality: proca.general.personality,  // Access 'personality' in the 'general' object
+  }).set(1);  // Set the value of the metric to 1
+} else {
+  console.log("snpGetStatusProcA [ERROR] - Personality not found in the response");
 }
+
+console.log(`snpGetStatusProcA [INFO] - ${snpUrl} - ${res.status}`);  // Log successful response
+return res;
+} catch (err) {
+  console.log(`snpGetStatusProcA [ERROR] - ${snpUrl} - ${err.message || err}`);
+}
+
+}
+
+	// Async function to get Processor Personality B
+	async function snpGetStatusProcB(snpUrl, snpPort) {
+		try {
+			console.log(`snpGetStatusProcB [INFO] - Requesting token for ${snpUrl}:${snpPort}`);
+			const token = await snpGetToken(snpUrl, snpPort);  // Get authorization token
+			console.log(`snpGetStatusProcB [INFO] - Token received: ${token}`);
+		
+			// Make the API request
+			const res = await axios({
+			method: 'get',
+			url: `https://${snpUrl}:${snpPort}/api/elements/${snpUrl}/config/processorB`,
+			headers: {
+				"Content-Type": "application/json",
+				"Authorization": token,  // Include authorization header
+			},
+			});
+			
+			console.log(`snpGetStatusProcB [INFO] - API Response Status: ${res.status}`);
+			console.log(`snpGetStatusProcB [INFO] - API Response Data: ${JSON.stringify(res.data)}`);
+		
+			// Check if 'config' exists in res.data before parsing
+			if (!res.data || !res.data.config) {
+			console.log("snpGetStatusProcB [ERROR] - No config data found in the response");
+			return;
+			}
+		
+	// Parse the config field (as it's a JSON string) in res.data
+	const procb = JSON.parse(res.data.config);
+	console.log(`snpGetStatusProcB [INFO] - Parsed procb: ${JSON.stringify(procb)}`);
+	
+	// Check if 'general' and 'personality' exist in proca
+	if (procb.general && procb.general.personality) {
+	  console.log(`snpGetStatusProcB [INFO] - Personality: ${procb.general.personality}`);
+	  
+	  // Set the personality as a label in snpProcB metric
+	  snpProcB.labels({
+		personality: procb.general.personality,  // Access 'personality' in the 'general' object
+	  }).set(1);  // Set the value of the metric to 1
+	} else {
+	  console.log("snpGetStatusProcB [ERROR] - Personality not found in the response");
+	}
+	
+	console.log(`snpGetStatusProcB [INFO] - ${snpUrl} - ${res.status}`);  // Log successful response
+	return res;
+	} catch (err) {
+	  console.log(`snpGetStatusProcB [ERROR] - ${snpUrl} - ${err.message || err}`);
+	}
+	
+	}
+	// Async function to get Processor Personality C
+	async function snpGetStatusProcC(snpUrl, snpPort) {
+		try {
+			console.log(`snpGetStatusProcC [INFO] - Requesting token for ${snpUrl}:${snpPort}`);
+			const token = await snpGetToken(snpUrl, snpPort);  // Get authorization token
+			console.log(`snpGetStatusProcC [INFO] - Token received: ${token}`);
+		
+			// Make the API request
+			const res = await axios({
+			method: 'get',
+			url: `https://${snpUrl}:${snpPort}/api/elements/${snpUrl}/config/processorC`,
+			headers: {
+				"Content-Type": "application/json",
+				"Authorization": token,  // Include authorization header
+			},
+			});
+			
+			console.log(`snpGetStatusProcC [INFO] - API Response Status: ${res.status}`);
+			console.log(`snpGetStatusProcC [INFO] - API Response Data: ${JSON.stringify(res.data)}`);
+		
+			// Check if 'config' exists in res.data before parsing
+			if (!res.data || !res.data.config) {
+			console.log("snpGetStatusProcC [ERROR] - No config data found in the response");
+			return;
+			}
+		
+	// Parse the config field (as it's a JSON string) in res.data
+	const procc = JSON.parse(res.data.config);
+	console.log(`snpGetStatusProcC [INFO] - Parsed procc: ${JSON.stringify(procc)}`);
+	
+	// Check if 'general' and 'personality' exist in proca
+	if (procc.general && procc.general.personality) {
+	  console.log(`snpGetStatusProcA [INFO] - Personality: ${procc.general.personality}`);
+	  
+	  // Set the personality as a label in snpProcC metric
+	  snpProcC.labels({
+		personality: procc.general.personality,  // Access 'personality' in the 'general' object
+	  }).set(1);  // Set the value of the metric to 1
+	} else {
+	  console.log("snpGetStatusProcC [ERROR] - Personality not found in the response");
+	}
+	
+	console.log(`snpGetStatusProcC [INFO] - ${snpUrl} - ${res.status}`);  // Log successful response
+	return res;
+	} catch (err) {
+	  console.log(`snpGetStatusProcC [ERROR] - ${snpUrl} - ${err.message || err}`);
+	}
+	
+	}
+
+		// Async function to get Processor Personality D
+		async function snpGetStatusProcD(snpUrl, snpPort) {
+			try {
+				console.log(`snpGetStatusProcD [INFO] - Requesting token for ${snpUrl}:${snpPort}`);
+				const token = await snpGetToken(snpUrl, snpPort);  // Get authorization token
+				console.log(`snpGetStatusProcD [INFO] - Token received: ${token}`);
+			
+				// Make the API request
+				const res = await axios({
+				method: 'get',
+				url: `https://${snpUrl}:${snpPort}/api/elements/${snpUrl}/config/processorD`,
+				headers: {
+					"Content-Type": "application/json",
+					"Authorization": token,  // Include authorization header
+				},
+				});
+				
+				console.log(`snpGetStatusProcD [INFO] - API Response Status: ${res.status}`);
+				console.log(`snpGetStatusProcD [INFO] - API Response Data: ${JSON.stringify(res.data)}`);
+			
+				// Check if 'config' exists in res.data before parsing
+				if (!res.data || !res.data.config) {
+				console.log("snpGetStatusProcD [ERROR] - No config data found in the response");
+				return;
+				}
+			
+		// Parse the config field (as it's a JSON string) in res.data
+		const procd = JSON.parse(res.data.config);
+		console.log(`snpGetStatusProcD [INFO] - Parsed procd: ${JSON.stringify(procd)}`);
+		
+		// Check if 'general' and 'personality' exist in procd
+		if (procd.general && procd.general.personality) {
+		  console.log(`snpGetStatusProcD [INFO] - Personality: ${procd.general.personality}`);
+		  
+		  // Set the personality as a label in snpProcD metric
+		  snpProcD.labels({
+			personality: procd.general.personality,  // Access 'personality' in the 'general' object
+		  }).set(1);  // Set the value of the metric to 1
+		} else {
+		  console.log("snpGetStatusProcD [ERROR] - Personality not found in the response");
+		}
+		
+		console.log(`snpGetStatusProcD [INFO] - ${snpUrl} - ${res.status}`);  // Log successful response
+		return res;
+		} catch (err) {
+		  console.log(`snpGetStatusProcD [ERROR] - ${snpUrl} - ${err.message || err}`);
+		}
+		
+		}
 
 // Async function to get PTP Status
 async function snpGetStatusPtp(snpUrl, snpPort) {
@@ -232,6 +467,11 @@ async function snpGetStatusPtp(snpUrl, snpPort) {
     console.log(`snpGetStatusPtp [ERROR] - ${snpUrl} - ${err}`);
   }
 }
+
+
+
+	
+	
 
 // Async function to get Wan Status
 async function snpGetStatusWan(snpUrl, snpPort) {
@@ -352,7 +592,7 @@ async function snpGetStatusWan(snpUrl, snpPort) {
 			}
 		}
 
-		console.log(`snpGetStatusWan [INFO] - ${snpUrl} - ${res.status}`);
+	console.log(`snpGetStatusWan [INFO] - ${snpUrl} - ${res.status}`);
     return res;
   } catch (err) {
     console.log(`snpGetStatusWan [ERROR] - ${snpUrl} - ${err}`);
@@ -547,7 +787,7 @@ async function snpGetStatusSystem(snpUrl, snpPort) {
 			}
 		}
 
-		console.log(`snpGetStatusSystem [INFO] - ${snpUrl} - ${res.status}`);
+	console.log(`snpGetStatusSystem [INFO] - ${snpUrl} - ${res.status}`);
     return res;
   } catch (err) {
     console.log(`snpGetStatusSystem [ERROR] - ${snpUrl} - ${err}`);
